@@ -1,0 +1,34 @@
+---
+title: "Reward Misalignment in Deep Reinforcement Learning: Evidence from a Bakery Production Environment"
+author: "Courtney Green"
+date: "2025-12-02"
+format: html
+---
+
+
+Abstract 
+
+Table of Contents:
+1. Introduction: [Introduction](introduction.qmd)
+2. Environment & Problem Formulation: [Environment](environment.qmd)
+3. Methods: [Methods](methods.qmd)
+4. Experiments: [Experiments](experiments.qmd)
+5. Results: [Results](results.qmd)
+6. Analysis & Discussion: [Analysis & Discussion](analysis_discussion.qmd)
+7. Conclusion & Future Work: [Conclusion & Future Work](conclusion_future_work.qmd)
+7. References: [References](references.qmd)
+
+
+
+# Bellman's Bakery
+
+A cute pastel “Tiny Bakery Tycoon” reinforcement learning project. Each episode is one day at a small bakery with 2 ovens, limited capacity, 5 pastries, and real-time queues. Customers arrive with skewed preferences and varying patience. The agent plans baking and serving to maximize profit while minimizing waits, abandonment, and waste.
+
+What’s inside:
+
+- Methods: PPO with action masking (deep RL) + small Thompson-sampling bandits for daily decisions (shallow RL).
+- Results: Comparison vs heuristic baselines (bake-to-par, greedy-queue, newsvendor) and ablations (price bandit, par bandit).
+- Viewer: A minimal Pygame viewer for a cute visual of the day.
+
+Repo: `bellmans_bakery` environment and consolidated `scripts/*` runner in this project.
+

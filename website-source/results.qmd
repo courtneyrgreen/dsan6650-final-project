@@ -1,0 +1,65 @@
+---
+title: "Results — Bellman's Bakery"
+format: html
+---
+
+## Key Metrics (means over eval days × seeds)
+
+| Policy            | Net Profit | Abandoned | Avg Wait (s) | Waste |
+|-------------------|-----------:|----------:|-------------:|------:|
+| Newsvendor (best) | 95.22      | 1.5%      | 12.7         | 41.1% |
+| PPO v3 best       | 35.28      | 74.7%     | 49.1         | 14.2% |
+| PPO+Price v3 best | 23.36      | 81.3%     | 52.1         | 37.7% |
+| PPO+Par 1e6       | -20.47     | 91.1%     | 56.0         | 82.8% |
+| PPO+Price (profit)| 25.79      | 83.5%     | 53.2         | 44.5% |
+
+Interpretation:
+- Newsvendor: High profit, high waste, low abandonment/wait.
+- PPO v3: Much lower profit, very low waste, massive abandonment.
+- PPO+Price (old metric): Slight shift but still cares about penalties.
+- PPO+Price (profit): Moves toward profit (profit ↑, waste ↑), still far from Newsvendor.
+Overall: reward shaping and capacity constraints dominate; PPO behaves rationally given penalties but cannot beat a strong heuristic in this regime.
+
+## Weekly Evaluation (5 days per seed, 20 seeds)
+
+| Policy             | Net Profit | Abandoned | Avg Wait (s) | Waste |
+|--------------------|-----------:|----------:|-------------:|------:|
+| Newsvendor weekly  | 25.58      | 0.4%      | 11.5         | 40.3% |
+| PPO weekly         | 20.17      | 79.8%     | 50.6         | 52.6% |
+| PPO+Price weekly   | 22.68      | 81.7%     | 52.0         | 38.6% |
+| PPO+Par weekly     | -20.74     | 90.9%     | 55.7         | 82.8% |
+| PPO+Price (profit) weekly | 26.36 | 83.4%    | 52.8         | 44.1% |
+
+## Training Curves (TensorBoard exports)
+
+PPO (v3 guardrails, 1e6 steps):
+
+![](../reports/figs/ppo_v3_guard_1e6/rollout_ep_rew_mean.png)
+
+![](../reports/figs/ppo_v3_guard_1e6/eval_mean_reward.png)
+
+PPO+Price (v3 guardrails, 1e6 steps):
+
+![](../reports/figs/ppo_bandit_v3_guard_1e6/rollout_ep_rew_mean.png)
+
+![](../reports/figs/ppo_bandit_v3_guard_1e6/eval_mean_reward.png)
+
+PPO+Price (profit-only bandit, 1e6 steps):
+
+![](../reports/figs/ppo_profitbandit_1e6/rollout_ep_rew_mean.png)
+
+![](../reports/figs/ppo_profitbandit_1e6/eval_mean_reward.png)
+
+## CSVs
+- Baselines: `reports/baselines.csv`
+- Baselines (weekly): `reports/baselines_week.csv`
+- PPO best: `reports/ppo_v3_guard_best_1e6.csv`
+- PPO weekly: `reports/ppo_week_best.csv`
+- PPO+Price best: `reports/ppo_bandit_v3_guard_best_1e6.csv`
+- PPO+Price weekly: `reports/ppo_bandit_week_best.csv`
+- PPO+Par 1e6: `reports/ppo_par_v3_eval_1e6.csv`
+- PPO+Par weekly: `reports/ppo_par_week_1e6.csv`
+- PPO+Price (profit-only): `reports/ppo_profitbandit_eval_1e6.csv`
+- PPO+Price (profit-only) weekly: `reports/ppo_profitbandit_week_1e6.csv`
+
+

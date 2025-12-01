@@ -1,0 +1,105 @@
+---
+title: "3 Environment and Problem Formulation"
+format: html
+---
+
+## 3.1 State, Actions, and Dynamics
+
+- State: inventory (5 items), oven loads (2 ovens; remaining time), queue summary (top‑k), queue length, time-of-day features, daily price multiplier, non‑stationary demand context.
+- Actions: serve one item type, bake one item type (subject to oven capacity), or idle. Up to 3 customers can be served per tick (serve_per_tick=3); serving consumes the tick.
+- Dynamics: 240 ticks/day (10s per tick), 2 ovens with capacity 4u, item-specific sizes/bake times/yields, Poisson arrivals with morning/lunch peaks, first arrival delayed 20s, queue cap=12, patience uniform 30–90s.
+
+## 3.2 Reward Function
+
+- Revenue: price − cost for each served item (+ serve_bonus 0.1).
+- Penalties: wait_penalty_per_tick=0.01 × queue length; abandon_penalty=0.7; balk_penalty=0.1.
+- Waste: end-of-day leftover_cost subtracted (net profit).
+
+## 3.3 Business Objective vs RL Objective
+
+- Business KPI: maximize net profit (sales − leftover cost) with reasonable service (low wait/abandonment).
+- RL objective: a composite reward trading profit against wait/abandonment/waste. This can favor conservative, low‑waste policies that hurt profit under capacity constraints.
+
+
+## Tiny Bakery Tycoon — Locked Decisions
+
+Project uses a shallow+deep RL pipeline: daily pricing bandit (global multiplier) + within‑day PPO with action masking.
+
+### Menu and assets
+- Items (5):
+  1) Mini Red Velvet Cake — `images/desserts/red_velvet.png`
+  2) Raspberry Matcha Roll — `images/desserts/matcha_roll.png`
+  3) Strawberry Cream Slice — `images/desserts/strawberry_cream.png`
+  4) Chocolate & Almond Drip Cake — `images/desserts/chocolate_drip.png`
+  5) Chocolate Orange Roll — `images/desserts/orange_roll.png`
+
+### Ovens and capacity
+- Ovens: 2
+- Oven capacity: 4 units per oven
+- Item sizes:
+  - Drip Cake = 4u
+  - Mini Red Velvet = 3u
+  - Strawberry Cream Slice = 1u
+  - Raspberry Matcha Roll = 1.5u
+  - Chocolate Orange Roll = 1.5u
+
+### Bake times and yields
+- Tick length: 10 seconds
+- Bake times (seconds): Red Velvet 90, Matcha Roll 60, Strawberry Slice 36, Drip Cake 120, Orange Roll 60
+- Batch yields (per completed bake): Red Velvet 2, Matcha Roll 4, Strawberry Slice 4, Drip Cake 1, Orange Roll 4
+
+### Prices and costs
+- Base prices: Red Velvet $6.00, Matcha Roll $4.50, Strawberry Slice $3.50, Drip Cake $8.00, Orange Roll $4.50
+- Costs: 40% of price
+- Pricing bandit: global daily multiplier {0.9, 1.0, 1.1}
+- Price sensitivity: medium (±10% demand effect across the day)
+
+### Demand and arrivals
+- Average customers/day: 60
+- No arrivals first 20 seconds (2 ticks) after opening
+- Time‑of‑day peaks (morning + lunch)
+- Demand mix (skewed):
+  - Strawberry Slice 30%, Matcha Roll 20%, Orange Roll 20%, Mini Red Velvet 15%, Drip Cake 15%
+- Non‑stationarity: enabled (±10% daily drift; ±10% weekly item swings)
+
+### Episode and service
+- Episode length: 240 ticks (≈40 minutes)
+- Serving rule: can serve any matching customer in the queue (not just head‑of‑line)
+- Service time: 10 seconds per served customer
+- Same‑day restocks: disabled
+- Starting inventory (light buffer): Strawberry Slice=3, Matcha Roll=2, Orange Roll=2, Mini Red Velvet=1, Drip Cake=0
+- Queue cap: 12; arrivals beyond cap balk (−0.1 reward)
+
+### Rewards
+- Serve within patience: +price − cost + 0.1
+- Per‑tick wait penalty: −0.02 per customer in queue
+- Abandonment penalty: −0.5
+- Idle action penalty: −0.005 per tick
+- End‑of‑day waste: −cost per leftover item
+
+### Customer patience
+- Tolerance: uniform 30–90 seconds
+
+### Observation and actions
+- Observation (vector):
+  - Time features: [sin, cos] of time‑of‑day
+  - Inventory counts for 5 items
+  - Ovens: remaining‑time fractions for 2 slots
+  - Queue length scalar
+  - First K=5 customers: for each, [desired‑item one‑hot(5), remaining‑patience fraction]
+  - Daily price multiplier (scalar)
+- Actions (11, with masking):
+  - Serve item i (5 actions; targets earliest customer wanting item i)
+  - Bake item i (5 actions; allowed if oven capacity permits)
+  - Idle (1 action)
+
+### Training plan
+- Algorithm: PPO (stable‑baselines3) with action masking
+- Vectorized envs: 8
+- Budget: start Quick 3e5 steps; scale to 1e6 after sanity‑check
+
+### Metrics
+- Profit/day, average wait, abandonment rate, waste rate, service level, satisfaction score
+
+
+PPO was selected because it provides stable policy-gradient training in stochastic, long-horizon environments with discrete actions. Alternative methods such as REINFORCE or A2C either suffer from high variance or unstable updates in this setting. Importantly, algorithm choice does not affect the fundamental objective mismatch observed in our results, as all policy-gradient methods optimize the reward as specified by the environment.

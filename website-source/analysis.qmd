@@ -1,0 +1,59 @@
+---
+title: "6 Analysis and Discussion"
+format: html
+---
+
+## 6.1 PPO Behavior
+
+- PPO strongly internalizes wait/abandon/waste penalties, choosing conservative baking that reduces waste but increases waits and abandonment, lowering profit.
+
+## 6.2 Reward–Metric Misalignment
+
+- Business score (profit) is not the same as the RL reward (profit minus penalties).
+- Under capacity constraints, the most profitable behavior (aggressive stocking) conflicts with low-waste incentives in the reward.
+
+## 6.3 Pricing Bandit Ineffectiveness
+
+- Penalty-based metric: price adjustments do not overcome serving bottlenecks; behavior remains penalty‑driven.
+- Profit‑only bandit: shifts toward profit (profit ↑, waste ↑) as expected, but remains far from Newsvendor.
+
+## 6.4 Ablation (optional)
+
+- PPO+Par (opening par selection) underperformed with our current par set and costs; further tuning or longer training may help but did not beat PPO in this study.
+
+
+
+Key takeaways from each paper (for your Discussion and Intro)
+1. Nomura et al. (2025) — PPO for perishable goods
+
+Takeaways:
+
+PPO performs well only when the reward exactly matches the target metric.
+
+DRL can approximate DP but only if penalties are balanced properly.
+
+Age-dependent demand makes pricing impactful; in your bakery environment, pricing has weak leverage because the bottleneck is capacity, not demand.
+
+Supports your result: PPO didn’t “fail,” it optimized the wrong objective.
+
+2. van Hezewijk (2024) — RL in service/queueing systems
+
+Takeaways:
+
+RL agents overweight penalized terms (wait costs, abandonment, congestion).
+
+Policies may look suboptimal on profit while being optimal on the specified reward.
+
+Waste-aversion behavior is common when leftover penalties dominate.
+
+This is exactly why your PPO collapsed into “under-produce, minimize waste” mode.
+
+3. Genalti (2021) — Bandit dynamic pricing
+
+Takeaways:
+
+Bandits work when elasticity matters; they fail when demand is bottlenecked elsewhere.
+
+Pricing is only useful when elasticity exists; if service rate throttles throughput, price does nothing.
+
+This matches your results: the pricing bandit provided little benefit.

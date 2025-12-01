@@ -1,0 +1,81 @@
+---
+title: "Bellman's Bakery — Project Report"
+format: html
+---
+
+## Abstract
+We build a graduate-level RL system for a small “Tiny Bakery Tycoon” simulator. Each episode is one day (240 ticks ≈ 40 minutes). The agent must decide what to bake and whom to serve, given two ovens (capacity 4 units each), bake times, customer arrivals with skewed preferences, and limited patience (30–90s). We combine deep RL (PPO with action masking) for within-day scheduling with shallow RL (Thompson-sampling bandits) for daily decisions (price multiplier, opening par levels). We benchmark against heuristic baselines (bake-to-par, greedy-queue, newsvendor) and evaluate profit (net of leftover cost), wait, abandonment, and waste. PPO under current settings underperforms the best baseline; we discuss causes and next steps.
+
+## Environment and MDP
+- State: inventory by item, oven loads and remaining times, queue summary (top-k), time-of-day features, day-level drift, price multiplier, last action string (for viewer).
+- Actions (per tick): serve a waiting customer, start baking one of 5 pastries (subject to oven capacity and a mask that prioritizes serving if anyone can be served), or idle.
+- Rewards: profit from served minus costs; penalties for wait per tick (0.01), abandonment, balking; end-of-day leftover cost subtracted (net profit). Idle penalty 0.0; serve bonus +0.1. Up to 3 serves per tick.
+- Episode: 240 ticks, average 60 customers, first arrival delayed 20s, queue cap 12, no same-day restocks, abandonment if wait too long.
+- Non-stationarity: daily drift (±10%) and weekly swings by item (±10%). Demand mix is skewed.
+
+## Pastries and Oven Mechanics
+- Items (5): Mini Red Velvet Cake, Raspberry Matcha Roll, Strawberry Cream Slice, Chocolate & Almond Drip Cake, Chocolate Orange Roll.
+- Ovens: two ovens, each capacity 4 units. Combinable capacities imply: large items consume more capacity; multiple small items can co-bake. Bake times differ by item (longer → higher opportunity cost).
+
+## Methods
+- Deep RL: PPO (SB3-Contrib MaskablePPO) with action masking via `env.unwrapped._action_mask()`. Observations normalized by design; entropy coeff 0.01, gamma 0.995, GAE(λ)=0.95, batch 256, n_steps 2048.
+- Shallow RL (bandits):
+  - Price bandit: Thompson Sampling over global daily multipliers {0.9, 1.0, 1.1}.
+  - Par bandit: Thompson Sampling over three opening par vectors, topping up inventory at reset.
+- Baselines: bake-to-par, greedy queue serve, newsvendor (target-fill based on demand).
+
+## Training and Evaluation
+- Training: v3 guardrails (serve up to 3/tick, lower wait penalty, no idle penalty). 1e6 steps for PPO and PPO+Price; PPO+Par trained at 300k (sanity) and 1e6 (final).
+- Evaluation: (a) Full-horizon 10 seeds × 20 days; (b) Weekly: 20 seeds × 5 days with per-seed aggregation.
+- Metrics: net profit, abandonment rate, average wait seconds, waste rate. CSVs in `reports/`, plots in `reports/figs/`.
+
+## Results Summary
+Primary (full-horizon, 10×20):
+
+- Best baseline (newsvendor): net profit 95.22; abandoned 1.5%; wait 12.7s; waste 41.1%.
+- PPO v3 best: net profit 35.28; abandoned 74.7%; wait 49.1s; waste 14.2%.
+- PPO+Price v3 best: net profit 23.36; abandoned 81.3%; wait 52.1s; waste 37.7%.
+- PPO+Par 1e6: net profit -20.47; abandoned 91.1%; wait 56.0s; waste 82.8%.
+
+Weekly (20×5, per-seed averaged):
+
+- Newsvendor weekly: net profit 25.58; abandoned 0.4%; wait 11.5s; waste 40.3%.
+- PPO weekly: net profit 20.17; abandoned 79.8%; wait 50.6s; waste 52.6%.
+- PPO+Price weekly: net profit 22.68; abandoned 81.7%; wait 52.0s; waste 38.6%.
+- PPO+Par weekly: net profit -20.74; abandoned 90.9%; wait 55.7s; waste 82.8%.
+
+Interpretation:
+- PPO underperforms the strongest heuristic baseline. The system is throughput/serving constrained; price changes gave limited leverage and sometimes harmed throughput.
+- PPO chooses to reduce waste aggressively (14.2% vs baseline 41.1%), but pays with high waits and abandonment, hurting profit.
+- Price bandit is not helpful under serving constraints; par bandit underperformed with the current par set and costs.
+
+## Discussion
+Why PPO lags baseline here:
+- Queueing pressure: With medium patience and 60 customers/day, prioritizing serve has large impact. Any hesitation or mis-bakes quickly amplifies waits and abandonment.
+- Masking helps, but learning a good bake/serve cadence with multiple items and oven constraints is still hard; the newsvendor-like baseline encodes strong prior structure that exploits the demand skew.
+- Non-stationarity introduces extra variance; PPO’s policy may need longer horizons or curriculum (start stationary → add drift).
+
+What helped:
+- Serve-per-tick increased to 3 and bake-mask (don’t bake if anyone is serveable) improved stability.
+- Reward shaping that lowers wait penalty and removes idle penalty reduced degenerate idling.
+
+Limitations:
+- No same-day restock; bandits operate at daily granularity only.
+- Limited par arms and price arms; coarse discretization.
+- 1e6 steps may still be short given state/action complexity.
+
+## Future Work
+- Longer training and/or curriculum learning.
+- Expand action space with limited restocks; or add a “pre-bake planning” phase (model-predictive top-off).
+- Tune par arms from data (Bayesian optimization) and broaden price arms.
+- Policy improvements: prioritized replay for rare long-wait events; reward shaping on service-level targets.
+
+## Reproducibility
+- Primary model: `models/best_ppo.zip` (CSV: `reports/ppo_v3_guard_best_1e6.csv`); weekly: `reports/ppo_week_best.csv`.
+- Baselines: `reports/baselines.csv`; weekly: `reports/baselines_week.csv`.
+- Ablations: `reports/ppo_bandit_v3_guard_best_1e6.csv`, weekly: `reports/ppo_bandit_week_best.csv`; `reports/ppo_par_v3_eval_1e6.csv`, weekly: `reports/ppo_par_week_1e6.csv`.
+- Plots: `reports/figs/ppo_v3_guard_1e6/*`, `reports/figs/ppo_bandit_v3_guard_1e6/*`.
+
+See [Training](training.qmd) for commands and pinned versions.
+
+

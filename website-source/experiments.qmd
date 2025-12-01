@@ -1,0 +1,71 @@
+---
+title: "5 Experiments"
+format: html
+---
+
+## 5.1 Setup
+
+- Episodes: 240 ticks/day; arrivals avg 60/day; two ovens, cap 4u; queue cap 12; patience 30–90s.
+- Non‑stationarity: daily drift ±10%, weekly item swings ±10%.
+- Training: PPO and PPO+Price at 1e6 steps; PPO+Par at 1e6; sanity runs at 300k when needed.
+- Evaluation: Full horizon (10 seeds × 20 days) and Weekly (20 seeds × 5 days, per‑seed aggregation).
+
+## 5.2 Evaluation Metrics
+
+- Net profit (sales − leftover cost), abandonment rate, average wait (seconds), waste rate.
+
+## 5.3 Results
+
+See the consolidated tables in Results for both full-horizon and weekly comparisons. We include four main policies:
+
+- Newsvendor (best baseline)
+- PPO v3 best
+- PPO+Price v3 best (penalty-based metric)
+- PPO+Par 1e6
+- Plus an ablation: PPO+Price (profit-only bandit)
+
+
+
+
+## 5.4 Business Metrics vs. RL Reward (Misalignment)
+
+Table A: Evaluation Metrics (business KPIs)
+
+These are the external criteria we care about when judging whether the bakery is “good”. Values come from the Results page.
+
+| Policy | Net Profit | Abandonment (%) | Avg Wait (s) | Waste (%) |
+|-------|-----------:|----------------:|-------------:|----------:|
+| Newsvendor (best) | see Results | see Results | see Results | see Results |
+| PPO v3 best | see Results | see Results | see Results | see Results |
+| PPO+Price v3 best | see Results | see Results | see Results | see Results |
+| PPO+Par 1e6 | see Results | see Results | see Results | see Results |
+| PPO+Price (profit) | see Results | see Results | see Results | see Results |
+
+Table B: Training Objective / RL Reward Components
+
+This shows what PPO is actually optimizing per step/day.
+
+| Term | Description | Weight | Contribution |
+|------|-------------|-------:|-------------:|
+| Profit | Revenue − cost of ingredients | +1.0 | Positive |
+| Wait penalty | 1 tick waiting | −0.01 | Negative |
+| Abandon penalty | 1 customer abandoning | −0.7 | Negative |
+| Balk penalty | 1 balked customer | −0.1 | Negative |
+| Leftover cost | At end of day | −1.0 | Negative |
+| Serve bonus | Each item served | +0.1 | Positive |
+
+One‑sentence summary: PPO maximizes the weighted sum of these components, which may not correlate with net profit. This explains why PPO reduces waste but accepts long waits and high abandonment.
+
+Reward definition (for the paper):
+
+We define the per‑step reward as
+
+\[
+R_t \;=\; \mathrm{profit}_t \;-\; \lambda_w \cdot \mathrm{wait\_ticks}_t \;-\; \lambda_a \cdot \mathrm{abandon}_t \;-\; \lambda_b \cdot \mathrm{balk}_t \;-\; \lambda_L \cdot \mathrm{leftover}_t \;+\; \lambda_s \cdot \mathrm{served}_t.
+\]
+
+Where
+\(\lambda_w = 0.01\) (wait penalty), \(\lambda_a = 0.7\) (abandon penalty), \(\lambda_b = 0.1\) (balk penalty), \(\lambda_L = 1.0\) (leftover cost at day end), and \(\lambda_s = 0.1\) (serve bonus).
+
+Intent: This reward balances throughput, service quality, and waste minimization. However, it is not equivalent to maximizing net profit, leading to the observed divergence between PPO’s learned policy and the Newsvendor baseline.
+

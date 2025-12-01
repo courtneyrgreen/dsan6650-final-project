@@ -1,0 +1,52 @@
+---
+title: "Introduction"
+format:
+  html:
+    toc: true
+    embed-resources: true
+references: references.bib 
+---
+
+## Motivation/Background
+
+Operational decision-making in retail and service systems often requires balancing several conflicting objectives at once: maximizing profit, keeping customers’ waiting times low, and avoiding both lost sales and waste. Bakeries are a canonical example. Products are perishable, capacity is limited, and demand is uncertain and time-varying. Classical models such as the newsvendor formulation provide clean theoretical guidance for single-period inventory decisions, but they typically assume a simplified objective and abstract away dynamic queues, abandonment, and capacity constraints.
+
+In parallel, deep reinforcement learning (DRL) has emerged as a promising tool for learning control policies directly from interaction with complex environments. DRL methods can in principle discover policies that adapt to non-stationary demand, queue dynamics, and nonlinear constraints without requiring explicit analytical structure. However, DRL agents do not optimize “profit” or “service quality” in the abstract. They optimize whatever reward function they are given. When the shaped reward used for training only partially reflects the business objective used for evaluation, learned behavior can diverge sharply from what practitioners would consider “good.”
+
+## Problem Formulation
+This project studies that gap in the context of **Bellman’s Bakery**, a stylized yet rich simulation of a small, capacity-constrained bakery. Each episode corresponds to a single day. Customers arrive with stochastic demand and limited patience; they may balk if the queue is long or abandon if they wait too long. The baker chooses which items to bake, when to serve queued customers, and when to idle, subject to oven capacity and bake times. At the end of the day, unsold items are discarded. The environment tracks several performance measures: net profit, average waiting time, abandonment, and waste.
+
+We consider a shaped reward that combines these components into a single scalar signal for reinforcement learning: positive terms for revenue and items served, and penalties for waiting, abandonment, balking, and leftover inventory. This reward is intentionally multi-objective and does not coincide exactly with net profit. The central question is how different solution methods respond to that design choice, and how their behavior compares to classical heuristics when evaluated on business metrics such as profit, service, and waste.
+
+To investigate this, we benchmark four types of policies:
+
+- A **newsvendor-style heuristic** that selects bake quantities using a static demand model and critical fractiles.
+- A **PPO agent** trained directly on the shaped reward in the Bellman’s Bakery environment.
+- A **hybrid PPO+bandit variant** that augments PPO with a pricing or par-level bandit component.
+- A **QRDQN agent**, representing an off-policy, value-based DRL method adapted to the same discrete action space.
+
+This setup leads to the following research questions:
+
+This setup leads to the following research questions:
+
+1. How does reward shaping in a multi-objective production system influence the qualitative behavior of deep RL agents?
+2. Under what conditions does a DRL policy outperform, match, or underperform a simple newsvendor heuristic when evaluated on profit, waiting time, abandonment, and waste?
+3. Do off-policy distributional methods such as QRDQN exhibit different trade-offs than on-policy methods like PPO under the same reward and environment?
+
+
+## Related Work
+Research at the intersection of perishable inventory management, dynamic pricing, and reinforcement learning has grown rapidly, but the settings differ meaningfully from the operational environment studied here.
+
+Work on perishable inventory control typically emphasizes optimal ordering and pricing under stochastic demand, often assuming structured demand models and tractable state spaces. Nomura et al. (2025) analyze a perishable inventory problem with dynamic pricing and age-dependent demand, comparing dynamic programming to PPO and showing that DRL can achieve near-optimal performance while reducing computation time genalti_executive_summary. Their results highlight two points relevant to this project: (i) PPO can perform well when the reward directly encodes the desired economic objective, and (ii) reward design strongly shapes policy behavior. Your findings mirror this: PPO optimized the reward you gave it, but that reward did not fully align with the profit metric used for evaluation.
+
+Second, van Hezewijk (2024) studies reinforcement learning for queueing and scheduling decisions and shows that RL frequently prioritizes surrogate reward terms (e.g., waiting-time penalties) over externally measured performance metrics when the two are not perfectly aligned. This supports the behavior observed in Bellman’s Bakery: PPO converged to a conservative “waste-minimizing” policy because waste penalties dominated returns, even though such policies performed poorly under a profit-only scoreboard.
+
+Finally, dynamic pricing research frequently employs bandit-based approaches rather than full RL. Genalti (2021) demonstrates that Thompson-sampling bandits can effectively learn profit-maximizing price adjustments under uncertainty, particularly when demand elasticity is monotonic and data are scarce. The pricing bandit in your environment reflects this lineage, though your results suggest that pricing flexibility does not improve throughput when the system is bottlenecked by service capacity rather than demand elasticity.
+
+Taken together, these works indicate that RL methods are highly sensitive to reward specification and state–action structure, and that bandit-based pricing only adds value when price elasticity meaningfully shifts demand. This motivates the comparative evaluation in this project across Newsvendor heuristics, PPO, and QRDQN, particularly under mismatched reward and evaluation metrics.
+
+
+## Contributions of this project
+The contributions of this work are threefold. First, we implement a high-fidelity, queue-based bakery environment that exposes realistic trade-offs between profit, service quality, and waste, and package it as a reusable Gymnasium environment. Second, we provide a systematic empirical comparison between heuristic policies, on-policy policy-gradient RL (PPO), hybrid bandit–RL variants, and an off-policy distributional value-based method (QRDQN) under a common reward function. Third, we show that mismatch between the training reward and the evaluation metric can lead PPO to learn policies that aggressively minimize waste at the expense of profit and service, while heuristics and QRDQN trace different points on the same trade-off surface. These findings underscore the importance of objective alignment when deploying deep RL in production and inventory management.
+
+The remainder of this report is organized as follows. The next section reviews related work on inventory control, perishable goods, and deep reinforcement learning for production systems. We then describe the Bellman’s Bakery environment and the reward formulation in detail, followed by the learning algorithms and baselines considered in this study. Subsequent sections present the experimental setup, empirical results, and a discussion of limitations and directions for future work.

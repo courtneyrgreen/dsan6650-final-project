@@ -1,0 +1,36 @@
+project:
+  type: website
+  output-dir: ../docs 
+  resources: 
+    - ../reports/figs/
+
+website:
+  title: "DSAN 6650 Final Project"
+  navbar:
+    left:
+      - href: introduction.qmd
+        text: Introduction
+      - href: environment.qmd
+        text: Environment
+      - href: methods.qmd
+        text: Methods
+      - href: experiments.qmd
+        text: Experiments
+      - href: results.qmd
+        text: Results
+      - href: analysis_discussion.qmd
+        text: Analysis
+      - href: conclusion_future_work.qmd
+        text: Conclusion
+      - href: references.qmd
+        text: References
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    page-layout: full
+    toc-location: right
+
+

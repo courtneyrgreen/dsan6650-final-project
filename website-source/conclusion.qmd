@@ -1,0 +1,19 @@
+---
+title: "7 Conclusion and Future Work"
+format: html
+---
+
+## Conclusion
+
+- Newsvendor achieves the highest profit by over-producing and accepting waste.
+- PPO optimizes a composite welfare objective; it reduces waste but suffers high waits/abandonment → lower profit.
+- Price bandit changes the trade-off slightly; profit‑only alignment helps modestly but cannot overcome serving bottlenecks.
+
+## Future Work
+
+- Curriculum (stationary → non‑stationary), longer horizons.
+- Smarter par selection and limited restocks; contextual bandits.
+- Reward shaping aligned more tightly with profit and service SLAs.
+- Capacity-focused changes (serve batching policies, oven setups).
+
+
