@@ -4881,7 +4881,17 @@ vertical-align: -.125em;
 </tr>
 </tbody>
 </table>
-<p>Legend (policy definitions): - Newsvendor (baseline): static heuristic that bakes toward per‑item targets computed from expected demand (accepts some waste to keep throughput high). - PPO (best): MaskablePPO trained on the shaped reward; “best” = highest evaluation net profit (averaged across seeds) among PPO runs. - PPO+Price (best): PPO with a Thompson‑sampling daily price multiplier optimized on the composite metric; “best” as above. - PPO+Par: PPO augmented with fixed par‑level targets that cap inventory; encourages conservative production. - PPO+Price (profit‑only): PPO with a pricing bandit updated on net profit only. - QRDQN (best): Quantile Regression DQN under the same reward; “best” selected by evaluation net profit.</p>
+<section id="legend-policy-definitions" class="level4">
+<h4 class="anchored" data-anchor-id="legend-policy-definitions">Legend (policy definitions):</h4>
+<ul>
+<li><strong>Newsvendor (baseline)</strong>: static heuristic that bakes toward per‑item targets computed from expected demand (accepts some waste to keep throughput high).</li>
+<li><strong>PPO (best)</strong>: MaskablePPO trained on the shaped reward; “best” = highest evaluation net profit (averaged across seeds) among PPO runs.</li>
+<li><strong>PPO+Price (best)</strong>: PPO with a Thompson‑sampling daily price multiplier optimized on the composite metric; “best” as above.</li>
+<li><strong>PPO+Par</strong>: PPO augmented with fixed par‑level targets that cap inventory; encourages conservative production.</li>
+<li><strong>PPO+Price (profit‑only)</strong>: PPO with a pricing bandit updated on net profit only.</li>
+<li><strong>QRDQN (best)</strong>: Quantile Regression DQN under the same reward; “best” selected by evaluation net profit.</li>
+</ul>
+</section>
 <section id="interpretation" class="level3">
 <h3 class="anchored" data-anchor-id="interpretation">Interpretation</h3>
 <p>Newsvendor dominates by baking aggressively, tolerating waste, and sustaining throughput. In contrast, PPO gravitates toward an under-producing regime, shaped by an objective that penalizes waiting, abandonment, and leftover inventory. The resulting behavior achieves <strong>very low waste</strong>, but at a cost: <strong>chronic stockouts</strong>, <strong>high abandonment</strong>, and <strong>long waits</strong>. In short, PPO is optimal for the reward it sees—not for economic profit.</p>

@@ -27,13 +27,14 @@ Metrics reported:
 | PPO+Price (profit-only)     | 25.79      | 83.5%     | 53.2         | 44.5% |
 | QRDQN (best)                | 41.32      | 21.2%     | 22.7         | 44.9% |
 
-Legend (policy definitions):
-- Newsvendor (baseline): static heuristic that bakes toward per‑item targets computed from expected demand (accepts some waste to keep throughput high).
-- PPO (best): MaskablePPO trained on the shaped reward; “best” = highest evaluation net profit (averaged across seeds) among PPO runs.
-- PPO+Price (best): PPO with a Thompson‑sampling daily price multiplier optimized on the composite metric; “best” as above.
-- PPO+Par: PPO augmented with fixed par‑level targets that cap inventory; encourages conservative production.
-- PPO+Price (profit‑only): PPO with a pricing bandit updated on net profit only.
-- QRDQN (best): Quantile Regression DQN under the same reward; “best” selected by evaluation net profit.
+#### Legend (policy definitions):
+
+- **Newsvendor (baseline)**: static heuristic that bakes toward per‑item targets computed from expected demand (accepts some waste to keep throughput high).
+- **PPO (best)**: MaskablePPO trained on the shaped reward; “best” = highest evaluation net profit (averaged across seeds) among PPO runs.
+- **PPO+Price (best)**: PPO with a Thompson‑sampling daily price multiplier optimized on the composite metric; “best” as above.
+- **PPO+Par**: PPO augmented with fixed par‑level targets that cap inventory; encourages conservative production.
+- **PPO+Price (profit‑only)**: PPO with a pricing bandit updated on net profit only.
+- **QRDQN (best)**: Quantile Regression DQN under the same reward; “best” selected by evaluation net profit.
 
 ### Interpretation
 
