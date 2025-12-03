@@ -4881,16 +4881,63 @@ vertical-align: -.125em;
 </tr>
 </tbody>
 </table>
-<section id="legend-policy-definitions" class="level4">
-<h4 class="anchored" data-anchor-id="legend-policy-definitions">Legend (policy definitions):</h4>
-<ul>
-<li><strong>Newsvendor (baseline)</strong>: static heuristic that bakes toward per‑item targets computed from expected demand (accepts some waste to keep throughput high).</li>
-<li><strong>PPO (best)</strong>: MaskablePPO trained on the shaped reward; “best” = highest evaluation net profit (averaged across seeds) among PPO runs.</li>
-<li><strong>PPO+Price (best)</strong>: PPO with a Thompson‑sampling daily price multiplier optimized on the composite metric; “best” as above.</li>
-<li><strong>PPO+Par</strong>: PPO augmented with fixed par‑level targets that cap inventory; encourages conservative production.</li>
-<li><strong>PPO+Price (profit‑only)</strong>: PPO with a pricing bandit updated on net profit only.</li>
-<li><strong>QRDQN (best)</strong>: Quantile Regression DQN under the same reward; “best” selected by evaluation net profit.</li>
-</ul>
+<section id="policy-key-what-each-label-means" class="level4">
+<h4 class="anchored" data-anchor-id="policy-key-what-each-label-means">Policy key (what each label means)</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 16%">
+<col style="width: 18%">
+<col style="width: 34%">
+<col style="width: 30%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Policy</th>
+<th>Family</th>
+<th>Mechanism / Extras</th>
+<th>Optimized objective</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Newsvendor (baseline)</td>
+<td>Heuristic</td>
+<td>Target-based baking toward expected demand; accepts waste</td>
+<td>Expected profit via service‑level (quantile) target</td>
+</tr>
+<tr class="even">
+<td>PPO (best)</td>
+<td>RL (on‑policy)</td>
+<td>MaskablePPO; serve-first + capacity masking</td>
+<td>Shaped reward</td>
+</tr>
+<tr class="odd">
+<td>PPO+Price (best)</td>
+<td>RL + Bandit</td>
+<td>Masked PPO + Thompson‑sampling daily price</td>
+<td>Composite (reward‑aligned)</td>
+</tr>
+<tr class="even">
+<td>PPO+Par</td>
+<td>Hybrid (RL + rule)</td>
+<td>Masked PPO + fixed par‑level inventory caps</td>
+<td>Shaped reward</td>
+</tr>
+<tr class="odd">
+<td>PPO+Price (profit‑only)</td>
+<td>RL + Bandit</td>
+<td>Masked PPO + Thompson‑sampling daily price</td>
+<td>Bandit optimizes profit only</td>
+</tr>
+<tr class="even">
+<td>QRDQN (best)</td>
+<td>RL (off‑policy, distributional)</td>
+<td>No action masking; replay + quantile value estimates</td>
+<td>Shaped reward</td>
+</tr>
+</tbody>
+</table>
+<p>Note: “best” = checkpoint with highest evaluation net profit (averaged across seeds) among runs.</p>
 </section>
 <section id="interpretation" class="level3">
 <h3 class="anchored" data-anchor-id="interpretation">Interpretation</h3>
@@ -4999,7 +5046,11 @@ vertical-align: -.125em;
 </tr>
 </tbody>
 </table>
-<p>Paired differences vs Newsvendor (per-seed): - PPO − Newsvendor: −67.94 (95% CI [−72.11, −63.68], n=10) - QRDQN − Newsvendor: −61.89 (95% CI [−71.45, −51.60], n=10)</p>
+<p>Paired differences vs Newsvendor (per-seed):</p>
+<ul>
+<li>PPO − Newsvendor: −67.94 (95% CI [−72.11, −63.68], n=10)</li>
+<li>QRDQN − Newsvendor: −61.89 (95% CI [−71.45, −51.60], n=10)</li>
+</ul>
 <p>These intervals confirm the large gaps observed in the tables and are not explained by sampling noise.</p>
 </section>
 <section id="training-dynamics" class="level2">
