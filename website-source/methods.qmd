@@ -143,7 +143,7 @@ RL-internal performance is monitored through TensorBoard rollout and evaluation 
 |-----------|---------|-------:|-----:|
 | Profit | revenue − cost | +1.0 | positive |
 | Wait penalty | per tick of waiting | −0.01 | negative |
-| Abandon penalty | expired patience | −0.7 | negative |
+| Abandon penalty | expired patience | −0.5 | negative |
 | Balk penalty | queue full | −0.1 | negative |
 | Leftover cost | unsold items | −1.0 | negative |
 | Serve bonus | each service | +0.1 | positive |
