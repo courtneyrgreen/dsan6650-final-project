@@ -20,7 +20,27 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
-</style>
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+  margin-bottom: 0em;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
 
 
 <script src="site_libs/quarto-nav/quarto-nav.js"></script>
@@ -166,11 +186,11 @@ ul.task-list li input[type="checkbox"] {
 
 <p>The results underscore a fundamental principle in reinforcement learning (RL) for operational challenges: an agent’s actions are influenced by the rewards it receives, rather than the criteria by which humans ultimately assess success. The Newsvendor heuristic makes the most money in the Tiny Bakery environment because it uses a strategy that the RL reward doesn’t like: making a lot of food, keeping inventory buffers, and accepting waste as a cost of keeping service levels high.</p>
 <p>PPO, on the other hand, optimizes a composite reward that gives a lot of weight to wait times, abandonment, and leftover inventory. In order to reach that goal, the agent acts exactly as expected: it uses a conservative baking policy that limits exposure to negative reward terms but lowers throughput, service quality, and, in the end, profit. When trained on the same composite reward, the pricing bandit reinforces this pattern. Even the profit-only version can only change behavior a little bit because pricing can’t fix the underlying capacity problems in ovens and queue dynamics.</p>
-<p>These results are similar to what has been found in recent studies on RL for perishable goods, service systems, and dynamic pricing <span class="citation" data-cites="nomura2025 vanhezewijk2024 genalti2021">[@nomura2025; @vanhezewijk2024; @genalti2021]</span>. In these studies, agents often look “suboptimal” on business metrics but are perfectly optimal under the shaped reward. They also fit with what reward design theory has said for a long time: if the shaped reward doesn’t keep the best policy under transformation, even well-meaning punishments can lead to behavior that isn’t economically desirable <span class="citation" data-cites="ng1999policy">[@ng1999policy]</span>. In this instance, the reward effectively instructs agents to perceive overproduction as more perilous than lost sales.</p>
-<p>The experiments do not point out algorithmic failure; instead, they bring up the bigger problem of “objective misalignment,” which is a well-known problem in the RL-for-operations literature and a major focus of safe reinforcement learning research <span class="citation" data-cites="garcia2015safe">[@garcia2015safe]</span>.</p>
+<p>These results are similar to what has been found in recent studies on RL for perishable goods, service systems, and dynamic pricing <span class="citation" data-cites="deepRLforDynamicPricing 5bc07a4907c842fe8910904e812a0b1f genalti2021dynamicpricing">(<a href="#ref-deepRLforDynamicPricing" role="doc-biblioref">Nomura, Liu, and Nishi 2025</a>; <a href="#ref-5bc07a4907c842fe8910904e812a0b1f" role="doc-biblioref">van Hezewijk 2024</a>; <a href="#ref-genalti2021dynamicpricing" role="doc-biblioref">Genalti 2021</a>)</span>. In these studies, agents often look “suboptimal” on business metrics but are perfectly optimal under the shaped reward. They also fit with what reward design theory has said for a long time: if the shaped reward doesn’t keep the best policy under transformation, even well-meaning punishments can lead to behavior that isn’t economically desirable <span class="citation" data-cites="ng1999policy">(<a href="#ref-ng1999policy" role="doc-biblioref">Ng, Harada, and Russell 1999</a>)</span>. In this instance, the reward effectively instructs agents to perceive overproduction as more perilous than lost sales.</p>
+<p>The experiments do not point out algorithmic failure; instead, they bring up the bigger problem of “objective misalignment,” which is a well-known problem in the RL-for-operations literature and a major focus of safe reinforcement learning research <span class="citation" data-cites="garcia2015safe">(<a href="#ref-garcia2015safe" role="doc-biblioref">Garcı́a and Fernández 2015</a>)</span>.</p>
 <section id="future-directions" class="level2">
 <h2 class="anchored" data-anchor-id="future-directions">Future Directions</h2>
-<p>There are a few extensions that could help close the alignment gap and make learning in the bakery environment more dynamic. One option is to change the rewards and set limits on the goals. A reward system that is based on profit or a limited RL formulation, like profit maximization with service-level penalties, could change behavior in a way that makes policies more economically sound. Techniques such as Lagrangian relaxation, CVaR-based learning, or multi-objective shaping provide more principled methods for encoding trade-offs among waste, service quality, and inventory risk. These methods are in line with the goals of risk-aware or safe reinforcement learning, which tries to find a balance between expected returns and downside control <span class="citation" data-cites="garcia2015safe">[@garcia2015safe]</span>.</p>
+<p>There are a few extensions that could help close the alignment gap and make learning in the bakery environment more dynamic. One option is to change the rewards and set limits on the goals. A reward system that is based on profit or a limited RL formulation, like profit maximization with service-level penalties, could change behavior in a way that makes policies more economically sound. Techniques such as Lagrangian relaxation, CVaR-based learning, or multi-objective shaping provide more principled methods for encoding trade-offs among waste, service quality, and inventory risk. These methods are in line with the goals of risk-aware or safe reinforcement learning, which tries to find a balance between expected returns and downside control <span class="citation" data-cites="garcia2015safe">(<a href="#ref-garcia2015safe" role="doc-biblioref">Garcı́a and Fernández 2015</a>)</span>.</p>
 <p>Another direction is <strong>training the curriculum and the environment</strong>. It might be easier for the agent to get out of conservative local optima if they start with stationary demand and then move on to non-stationarity. This is similar to successful methods used in earlier research on pricing and inventory, where agents learn to generalize better when they are trained in steps.</p>
 <p>It may also be very important to come up with “capacity-aware strategies.” Short-horizon lookahead, bake-batch optimization, or different oven configurations are some of the new tools that the agent could use to deal with starvation regimes. In the same way, allowing limited restocking or soft limits on par levels could make the policy space bigger without making things less clear.</p>
 <p>Another area of research could be <strong>better baselines and hybrid methods</strong>. More expressive par heuristics, contextual bandits for pricing, or RL–heuristic hybrids could better combine what we already know about a domain with what we learn. Newsvendor doesn’t work because it’s flexible; it works because its structural assumptions fit the problem well. Incorporating those assumptions into learning frameworks could produce more resilient, adaptable solutions.</p>
@@ -178,9 +198,26 @@ ul.task-list li input[type="checkbox"] {
 <p>In summary, these directions make it clear that the main problem is not adjusting PPO or adding more layers to the architecture. It is creating reward signals that convey operational objectives, such as profitability and service quality, in a manner that the agent can effectively optimize. The experiments presented herein provide a definitive diagnosis of the misalignment and a strategic framework for developing reinforcement learning systems that more accurately embody real-world business priorities.</p>
 
 
+
 </section>
 
-</main> <!-- /main -->
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography" id="quarto-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list">
+<div id="ref-garcia2015safe" class="csl-entry" role="listitem">
+Garcı́a, Javier, and Fernando Fernández. 2015. <span>“A Comprehensive Survey on Safe Reinforcement Learning.”</span> <em>Journal of Machine Learning Research</em> 16 (1): 1437–80. <a href="https://jmlr.org/papers/volume16/garcia15a/garcia15a.pdf">https://jmlr.org/papers/volume16/garcia15a/garcia15a.pdf</a>.
+</div>
+<div id="ref-genalti2021dynamicpricing" class="csl-entry" role="listitem">
+Genalti, Gianmarco. 2021. <span>“A Multi-Armed Bandit Approach to Dynamic Pricing.”</span> Master's thesis, Laurea Magistrale in Mathematical Engineering - Ingegneria Matematica. <a href="https://www.politesi.polimi.it/bitstream/10589/183733/4/genalti_executive_summary.pdf">https://www.politesi.polimi.it/bitstream/10589/183733/4/genalti_executive_summary.pdf</a>.
+</div>
+<div id="ref-ng1999policy" class="csl-entry" role="listitem">
+Ng, Andrew Y, Daishi Harada, and Stuart Russell. 1999. <span>“Policy Invariance Under Reward Transformations: Theory and Application to Reward Shaping.”</span> In <em>Proceedings of the Sixteenth International Conference on Machine Learning (ICML)</em>, 278–87. <a href="https://people.eecs.berkeley.edu/~pabbeel/cs287-fa09/readings/NgHaradaRussell-shaping-ICML1999.pdf">https://people.eecs.berkeley.edu/~pabbeel/cs287-fa09/readings/NgHaradaRussell-shaping-ICML1999.pdf</a>.
+</div>
+<div id="ref-deepRLforDynamicPricing" class="csl-entry" role="listitem">
+Nomura, Yusuke, Ziang Liu, and Tatsushi Nishi. 2025. <span>“Deep Reinforcement Learning for Dynamic Pricing and Ordering Policies in Perishable Inventory Management.”</span> <em>Applied Sciences</em> 15 (5). <a href="https://doi.org/10.3390/app15052421">https://doi.org/10.3390/app15052421</a>.
+</div>
+<div id="ref-5bc07a4907c842fe8910904e812a0b1f" class="csl-entry" role="listitem">
+van Hezewijk, Lotte. 2024. <span>“Deep Reinforcement Learning for Production and Inventory Management: Bridging the Gap Between Theory and Practice.”</span> Beta PhD Dissertation Series. Phd Thesis 1 (Research TU/e / Graduation TU/e), Industrial Engineering; Innovation Sciences; Eindhoven University of Technology.
+</div>
+</div></section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
 window.document.addEventListener("DOMContentLoaded", function (event) {
   const toggleBodyColorMode = (bsSheetEl) => {
