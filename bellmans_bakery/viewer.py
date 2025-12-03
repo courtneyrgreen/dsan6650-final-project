@@ -3,21 +3,12 @@ from typing import Dict
 
 import pygame
 
-# Import names and bake constants for light-weight rendering logic
 from .env import ITEM_NAMES, ITEM_BAKE_SECONDS
 
 
 class PastelViewer:
     """
     Lightweight Pygame viewer for Bellman's Bakery.
-
-    Intent: give a fast, cute visual without building a full UI system.
-    We draw:
-      - Title + header: time, profit, price multiplier
-      - Inventory with PNG icons and counts
-      - Two ovens with progress bars and tiny item thumbnails
-      - Queue as a row of larger pastel circles (first ~12)
-
     The viewer reads the env's public attributes via `env.unwrapped`.
     """
 
@@ -27,7 +18,6 @@ class PastelViewer:
         self.screen = pygame.display.set_mode((width, height))
         self.clock = pygame.time.Clock()
 
-        # Try Montserrat; fallback to Arial if not installed.
         mont = pygame.font.match_font("montserrat")
         if mont:
             self.font = pygame.font.Font(mont, 24)
@@ -38,7 +28,7 @@ class PastelViewer:
             self.small = pygame.font.SysFont("arial", 18)
             self.title = pygame.font.SysFont("arial", 28, bold=True)
 
-        # Pastel palette
+        # Palette
         self.COLORS = {
             "bg": (250, 218, 221),  # pink
             "cream": (255, 247, 230),
@@ -49,9 +39,14 @@ class PastelViewer:
             "queue_border": (160, 140, 190),
         }
 
-        # Load item images; fall back to colored boxes if missing
+        # Load item images
         root = Path(__file__).resolve().parents[1]
         img_dir = root / "images" / "desserts"
+        oven_path = root / "images" / "oven.png"
+        self.oven_img = None
+        if oven_path.exists():
+            base = pygame.image.load(str(oven_path)).convert_alpha()
+            self.oven_img = pygame.transform.smoothscale(base, (300, 170))
         name_to_file = {
             "mini_red_velvet": "red_velvet.png",
             "raspberry_matcha_roll": "matcha_roll.png",
@@ -75,6 +70,15 @@ class PastelViewer:
             int(ITEM_BAKE_SECONDS[i] // 10) for i in range(len(ITEM_NAMES))
         )
 
+        # Layout constants (keep rows evenly spaced vertically)
+        self.ROW_SPACING = 90  # aim for 80–100px between rows
+        self.LAYOUT = {
+            "inventory_y": 90,
+            "ovens_y": 230,  # leaves ~ROW_SPACING below inventory boxes
+            "queue_y": 450,  # moved slightly down for more space under ovens
+            "action_y": 520,  # dedicated action bar, no overlapping icons
+        }
+
     def draw_header(self, env) -> None:
         s = env.unwrapped
         t = s.t
@@ -93,7 +97,10 @@ class PastelViewer:
     def draw_inventory(self, env) -> None:
         s = env.unwrapped
         x = 20
-        y = 80
+        y = self.LAYOUT["inventory_y"]
+        # Section label
+        inv_lbl = self.small.render("Inventory", True, self.COLORS["text"])
+        self.screen.blit(inv_lbl, (20, y - 24))
         for i, name in enumerate(ITEM_NAMES):
             self._rounded_rect((x, y, 168, 88), self.COLORS["lav"], radius=14)
             self.screen.blit(self.icons[name], (x + 10, y + 12))
@@ -110,10 +117,46 @@ class PastelViewer:
 
     def draw_ovens(self, env) -> None:
         s = env.unwrapped
-        ox = 20
-        oy = 260
-        for oven in s.ovens:
-            self._rounded_rect((ox, oy, 420, 110), self.COLORS["cream"], radius=18)
+        oy = self.LAYOUT["ovens_y"]
+        # Center two ovens horizontally with a fixed gap
+        oven_w, oven_h = 300, 170
+        gap = 120
+        total_w = 2 * oven_w + gap
+        ox = max(20, (self.screen.get_width() - total_w) // 2)
+
+        for idx, oven in enumerate(s.ovens):
+            if self.oven_img is not None:
+                self.screen.blit(self.oven_img, (ox, oy))
+                # Label above each oven (centered)
+                idx_surf = self.small.render(
+                    f"Oven {idx + 1}", True, self.COLORS["text"]
+                )
+                self.screen.blit(
+                    idx_surf, (ox + oven_w // 2 - idx_surf.get_width() // 2, oy - 18)
+                )
+                # Progress bar below the oven
+                bar_x, bar_y, bar_w, bar_h = ox + 12, oy + oven_h + 10, 276, 12
+            else:
+                # Fallback simple oven shape
+                self._rounded_rect(
+                    (ox, oy, oven_w, oven_h), self.COLORS["cream"], radius=18
+                )
+                # Dark inner "window"
+                pygame.draw.rect(
+                    self.screen,
+                    (70, 70, 70),
+                    (ox + 20, oy + 36, oven_w - 40, 90),
+                    border_radius=12,
+                )
+                idx_surf = self.small.render(
+                    f"Oven {idx + 1}", True, self.COLORS["text"]
+                )
+                self.screen.blit(
+                    idx_surf, (ox + oven_w // 2 - idx_surf.get_width() // 2, oy - 18)
+                )
+                # Progress bar below the oven
+                bar_x, bar_y, bar_w, bar_h = ox + 12, oy + oven_h + 10, oven_w - 24, 12
+
             if oven:
                 max_ticks = max(load[2] for load in oven)
                 frac = max(
@@ -121,37 +164,58 @@ class PastelViewer:
                 )
             else:
                 frac = 0.0
+            # Progress bar
             pygame.draw.rect(
                 self.screen,
-                self.COLORS["mint"],
-                (ox + 12, oy + 72, int(396 * frac), 18),
-                border_radius=10,
+                (210, 235, 215),
+                (bar_x, bar_y, int(bar_w * frac), bar_h),
+                border_radius=8,
             )
-            tx = ox + 16
-            for item_idx, _size, _ticks_remaining in oven:
-                name = ITEM_NAMES[item_idx]
-                thumb = pygame.transform.smoothscale(self.icons[name], (36, 36))
-                self.screen.blit(thumb, (tx, oy + 26))
-                tx += 40
-            ox += 440
+            # Larger thumbnails, centered over the oven window area
+            thumb_size = 50
+            step = 38
+            ty = oy + 82
+            n = len(oven)
+            if n > 0:
+                row_w = n * thumb_size + (n - 1) * (step - thumb_size)
+                tx = ox + oven_w // 2 - row_w // 2
+                for item_idx, _size, _ticks_remaining in oven:
+                    name = ITEM_NAMES[item_idx]
+                    thumb = pygame.transform.smoothscale(
+                        self.icons[name], (thumb_size, thumb_size)
+                    )
+                    self.screen.blit(thumb, (tx, ty))
+                    tx += step
+            ox += oven_w + gap  # move to next oven
 
     def draw_queue(self, env) -> None:
         s = env.unwrapped
-        self._rounded_rect((20, 400, 860, 80), self.COLORS["cream"], radius=18)
-        # Current action text
-        action_txt = getattr(s, "last_action_str", "idle")
-        lbl = self.small.render(
-            f"Current action: {action_txt}", True, self.COLORS["text"]
-        )
-        self.screen.blit(lbl, (32, 410))
-        x = 40
-        y = 440
+        # Queue row (separate from current action bar)
+        qy = self.LAYOUT["queue_y"]
+        q_label = self.small.render("Queue:", True, self.COLORS["text"])
+        self.screen.blit(q_label, (20, qy - 24))
+        # Move avatars down and to the right to avoid overlapping the label
+        x = 100
+        y = qy + 14
         for i, _cust in enumerate(s.queue[:12]):
             pygame.draw.circle(self.screen, self.COLORS["queue"], (x, y), 16)
             pygame.draw.circle(
                 self.screen, self.COLORS["queue_border"], (x, y), 16, width=3
             )
             x += 40
+
+    def draw_action_bar(self, env) -> None:
+        s = env.unwrapped
+        ay = self.LAYOUT["action_y"]
+        # Dedicated current action bar; no customer icons drawn here
+        self._rounded_rect((20, ay, 860, 64), self.COLORS["cream"], radius=18)
+        # Format action text: replace underscores with spaces and capitalize
+        raw = getattr(s, "last_action_str", "idle")
+        nice = raw.replace("_", " ").strip()
+        if len(nice) > 0:
+            nice = nice[0].upper() + nice[1:]
+        lbl = self.small.render(f"Current action: {nice}", True, self.COLORS["text"])
+        self.screen.blit(lbl, (32, ay + 20))
 
     def render(self, env) -> None:
         for event in pygame.event.get():
@@ -163,11 +227,9 @@ class PastelViewer:
         self.draw_inventory(env)
         self.draw_ovens(env)
         self.draw_queue(env)
+        self.draw_action_bar(env)
         pygame.display.flip()
         self.clock.tick(30)
 
-    # --------- helpers ----------
     def _rounded_rect(self, rect, color, radius=8):
         pygame.draw.rect(self.screen, color, rect, border_radius=radius)
-
-

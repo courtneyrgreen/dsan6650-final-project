@@ -6,11 +6,6 @@ from typing import Dict, List, Tuple, Optional
 import gymnasium as gym
 import numpy as np
 
-
-# ------------------------------
-# Domain configuration constants
-# ------------------------------
-
 ITEM_NAMES = [
     "mini_red_velvet",
     "raspberry_matcha_roll",
@@ -130,10 +125,6 @@ class BellmansBakeryEnv(gym.Env):
         self._build_arrival_profile()
         self._reset_sim(day_index=0)
 
-    # -----------------
-    # Gym API
-    # -----------------
-
     def reset(self, *, seed: Optional[int] = None, options: Optional[Dict] = None):
         super().reset(seed=seed)
         if seed is not None:
@@ -196,10 +187,6 @@ class BellmansBakeryEnv(gym.Env):
         print(
             f"t={self.t:03d}/{self.day_ticks}  profit=${self.profit:.2f}  inv={inv}  queue={len(self.queue)}"
         )
-
-    # -----------------
-    # Internal mechanics
-    # -----------------
 
     def _reset_sim(self, day_index: int):
         self.day_index = day_index
@@ -465,5 +452,3 @@ class BellmansBakeryEnv(gym.Env):
         if s <= 0:
             return np.full_like(v, 1.0 / len(v))
         return v / s
-
-
