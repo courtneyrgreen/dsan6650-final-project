@@ -51,3 +51,19 @@ build/
 runs/
 models/archive/
 reports/archive/ 
+
+# Large local artifacts (do not version heavy outputs)
+models/*.zip
+!models/best_ppo.zip
+!models/best_model.zip
+!models/best_ppo_bandit.zip
+!models/ppo_bandit_v3_guard_1e6.zip
+!models/ppo_par_v3_1e6.zip
+!models/ppo_profitbandit_1e6.zip
+!models/ppo_v3_guard_1e6.zip
+!models/qrdqn_1e6.zip
+videos/
+screenshots/
+
+# Scratch scripts or notebooks not meant for versioning
+stats_tmp.py

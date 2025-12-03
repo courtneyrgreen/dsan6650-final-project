@@ -161,7 +161,7 @@ $$
 
 with  
 $\lambda_w = 0.01$,  
-$\lambda_a = 0.7$,  want e
+$\lambda_a = 0.7$,  
 $\lambda_b = 0.1$,  
 $\lambda_L = 1.0$,  
 $\lambda_s = 0.1$.

@@ -16,23 +16,13 @@ This project examines reward–behavior alignment in a capacity‑constrained pr
 
 A short viewer clip of one simulated day (Newsvendor baseline) is embedded below.
 
-<video controls src="videos/viewer_index_demo.mp4" width="720">
+<video controls src="../videos/viewer_index_demo.mp4" width="720">
   Your browser does not support the video tag.
 </video>
 
 <p style="margin-top:6px;color:#666;">Clip shows baking/serving decisions, oven progress, queue, and current action.</p>
 
 Quickstart and viewer controls are documented in the project README.
-
-## Table of Contents
-
-1. [Introduction](introduction.html)
-2. [Environment](environment.html)
-3. [Methods](methods.html)
-4. [Results](results.html)
-5. [Analysis & Discussion](analysis.html)
-6. [Conclusion & Future Work](conclusion.html)
-7. [References](references.html)
 
 ## Overview
 

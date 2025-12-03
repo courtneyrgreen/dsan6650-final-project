@@ -7,6 +7,11 @@ from sb3_contrib.qrdqn import QRDQN
 from sb3_contrib.common.wrappers import ActionMasker
 
 from bellmans_bakery import BellmansBakeryEnv, PastelViewer
+from .baselines import (
+    NewsvendorPolicy,
+    BakeToParPolicy,
+    GreedyQueuePolicy,
+)
 
 
 def mask_fn(env):
@@ -20,6 +25,13 @@ def main():
     parser.add_argument("--fps", type=int, default=30)
     parser.add_argument(
         "--screenshot-dir", type=str, default="screenshots", help="Where to save PNGs"
+    )
+    parser.add_argument(
+        "--baseline",
+        type=str,
+        choices=["newsvendor", "par", "greedy"],
+        default=None,
+        help="Run a heuristic baseline policy instead of a trained model",
     )
     parser.add_argument(
         "--record_mp4",
@@ -40,15 +52,29 @@ def main():
 
     # Load model if present
     try:
-        if args.algo == "qrdqn":
-            model = QRDQN.load(args.model, env=env)
+        if args.baseline:
+            model = None
         else:
-            model = MaskablePPO.load(args.model, env=env)
+            if args.algo == "qrdqn":
+                model = QRDQN.load(args.model, env=env)
+            else:
+                model = MaskablePPO.load(args.model, env=env)
     except Exception:
         model = None
         print(f"Model not found or unsupported at {args.model}; running a random policy for preview.")
 
+    # Initialize optional baseline policy
+    baseline = None
+    if args.baseline == "newsvendor":
+        baseline = NewsvendorPolicy()
+    elif args.baseline == "par":
+        baseline = BakeToParPolicy()
+    elif args.baseline == "greedy":
+        baseline = GreedyQueuePolicy()
+
     obs, info = env.reset()
+    if baseline is not None:
+        baseline.on_reset(env)
     done = False
     paused = False
 
@@ -91,7 +117,10 @@ def main():
                     print(f"Saved screenshot: {path}")
         if not done:
             if not paused:
-                if model:
+                if baseline is not None:
+                    mask = env.unwrapped._action_mask()
+                    action = baseline.choose(env, mask)
+                elif model:
                     action, _ = model.predict(obs, deterministic=True)
                 else:
                     action = env.action_space.sample()
@@ -99,6 +128,8 @@ def main():
                 done = terminated or truncated
         else:
             obs, info = env.reset()
+            if baseline is not None:
+                baseline.on_reset(env)
             done = False
         viewer.render(env)
 
@@ -119,7 +150,9 @@ def main():
                         except Exception:
                             pass
                         writer = None
-                        print("Stopped recording (duration reached).")
+                        print("Stopped recording (duration reached). Exiting.")
+                        pygame.quit()
+                        return
             except Exception as e:
                 print(f"Frame write failed: {e}")
                 try:
