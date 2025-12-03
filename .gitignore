@@ -41,6 +41,8 @@ build/
 *.tmp
 *.bak
 
+/.venv
+
 # Optional: ignore large local artifacts (uncomment if you don't want to push them)
 # models/
 # runs/

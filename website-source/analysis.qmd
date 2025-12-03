@@ -1,59 +1,65 @@
 ---
-title: "6 Analysis and Discussion"
+title: "Analysis and Discussion"
 format: html
 ---
 
-## 6.1 PPO Behavior
+# Analysis and Discussion
 
-- PPO strongly internalizes wait/abandon/waste penalties, choosing conservative baking that reduces waste but increases waits and abandonment, lowering profit.
+The empirical results reveal a consistent pattern: the reinforcement learning agents behave in ways that are entirely rational under the reward they are given, but not aligned with the business metric used for evaluation. The following sections examine why PPO converged to a conservative, low-baking policy; why pricing adjustments had limited effect; and how these findings connect to observations in recent literature.
 
-## 6.2 Reward–Metric Misalignment
+## Behavior of PPO in a Capacity-Constrained Bakery
 
-- Business score (profit) is not the same as the RL reward (profit minus penalties).
-- Under capacity constraints, the most profitable behavior (aggressive stocking) conflicts with low-waste incentives in the reward.
+Across all PPO variants, the agent reliably converges to a policy that minimizes waste, abandonment penalties, and wait-time penalties by sharply limiting production. This behavior is not a failure to learn. Instead, it reflects the structure of the reward function, where leftover items incur a strong penalty and every additional baked item implicitly carries potential downside risk.
 
-## 6.3 Pricing Bandit Ineffectiveness
+When waste is heavily penalized and the environment imposes strict capacity constraints, PPO discovers that aggressive baking—while profitable—creates exposure to negative reward terms. By contrast, an under-production regime keeps waste near zero, caps penalty accumulation, and stabilizes reward variance across stochastic demand realizations.
 
-- Penalty-based metric: price adjustments do not overcome serving bottlenecks; behavior remains penalty‑driven.
-- Profit‑only bandit: shifts toward profit (profit ↑, waste ↑) as expected, but remains far from Newsvendor.
+The resulting policy produces low waste but chronically insufficient inventory, leading to long wait times and high abandonment. PPO effectively learns a *risk-averse approximation of the reward*, not the profit-maximizing policy preferred by the business.
 
-## 6.4 Ablation (optional)
+Earlier versions of the environment briefly included a small idle penalty, which unintentionally encouraged the agent to avoid baking or serving when uncertain. Removing this idle penalty and strengthening serve-first action masking eliminated degenerate idling behavior but did not meaningfully improve profit. This further confirms that the core issue is not exploration or update stability but the structure of the reward itself.
 
-- PPO+Par (opening par selection) underperformed with our current par set and costs; further tuning or longer training may help but did not beat PPO in this study.
+## Misalignment Between Reward and Business Metrics
 
+The bakery’s true objective is to maximize net profit while maintaining reasonable service quality. The RL reward, however, is a composite of profit and multiple penalties:
 
+- per-tick wait cost  
+- abandonment penalty  
+- balking penalty  
+- leftover inventory cost  
+- a modest serve bonus  
 
-Key takeaways from each paper (for your Discussion and Intro)
-1. Nomura et al. (2025) — PPO for perishable goods
+This shaped reward was meant to stabilize learning and encode operational preferences, but it inadvertently emphasized waste and abandonment avoidance to a degree that suppresses profitable behavior.
 
-Takeaways:
+Under tight oven capacity and non-stationary demand, profitable behavior requires baking ahead of demand and carrying inventory risk. The reward penalizes exactly this behavior. Consequently, PPO selects policies that appear suboptimal in business terms but are optimal under the reward function. This phenomenon directly mirrors patterns documented in recent queueing and operations-focused RL studies, where agents adopt conservative service or stocking policies when delay or leftover penalties are overweighted.
 
-PPO performs well only when the reward exactly matches the target metric.
+## Limited Effectiveness of Pricing Adaptation
 
-DRL can approximate DP but only if penalties are balanced properly.
+Both pricing-bandit variants highlight an important point: pricing only improves performance when price changes influence demand in a meaningful way. In the Tiny Bakery environment, the binding constraint is service rate, not demand volume. Even with modest price elasticity, throughput remains capped by ovens, bake times, and queuing dynamics.
 
-Age-dependent demand makes pricing impactful; in your bakery environment, pricing has weak leverage because the bottleneck is capacity, not demand.
+When the bandit is trained using the composite penalty metric, it simply reinforces PPO’s already conservative tendencies. Prices drift in directions that do not resolve bottlenecks in service capacity. Switching the bandit to a profit-only metric produces the expected economic response: profit rises (slightly) and waste increases. But the overall impact remains small because pricing does not change the fundamental bottleneck.
 
-Supports your result: PPO didn’t “fail,” it optimized the wrong objective.
+This behavior is consistent with dynamic pricing literature in perishable-goods environments: price matters only when service capacity is elastic or when pricing can meaningfully shape the order mix. In this setting, neither condition holds.
 
-2. van Hezewijk (2024) — RL in service/queueing systems
+## Ablation: Par-Level Hybrid Behavior
 
-Takeaways:
+The PPO+Par hybrid underperforms sharply. Par levels were designed as a simple, interpretable heuristic, but in this environment they act as a rigid constraint that fails to adapt to demand drift or stochastic fluctuations. The par system forces sustained underproduction, pushing the agent into a starvation regime where neither PPO nor the heuristic can recover. Additional tuning could improve this baseline, but the underlying rigidity limits its ability to respond to non-stationary dynamics.
 
-RL agents overweight penalized terms (wait costs, abandonment, congestion).
+## Placeholder: QRDQN Analysis (to be completed)
 
-Policies may look suboptimal on profit while being optimal on the specified reward.
+A section will be added here once QRDQN training concludes. The analysis will compare value-based and policy-gradient behavior in this environment and assess whether distributional value estimation mitigates conservative tendencies seen in PPO.
 
-Waste-aversion behavior is common when leftover penalties dominate.
+## Connection to Related Literature
 
-This is exactly why your PPO collapsed into “under-produce, minimize waste” mode.
+The dynamics observed here echo themes across recent RL-for-operations research.
 
-3. Genalti (2021) — Bandit dynamic pricing
+Nomura et al. (2025) show that PPO can approximate dynamic programming solutions in perishable-goods systems only when the reward is carefully calibrated to the true objective. When penalties are misbalanced, PPO converges to policies that look suboptimal in domain metrics but optimal in reward space. Their work further demonstrates that pricing affects outcomes only when demand elasticity is strong; in capacity-limited systems, pricing cannot fix operational bottlenecks. This aligns with our finding that price multipliers had limited leverage.
 
-Takeaways:
+van Hezewijk (2024) analyzes RL behavior in service and queueing systems and finds that agents routinely overweight delayed penalties—exactly the pattern observed in our conservative PPO policies. When leftover costs dominate the reward landscape, agents adopt extreme waste-avoidant behavior even at the expense of throughput and profit. The resemblance to our under-production pattern is direct.
 
-Bandits work when elasticity matters; they fail when demand is bottlenecked elsewhere.
+Finally, dynamic-pricing studies such as Genalti (2021) emphasize that bandit-based pricing performs well only when price affects the primary bottleneck. When congestion, service rate, or operational capacity constrain the system, pricing cannot meaningfully improve overall performance. This is precisely why our profit-based bandit moved in the right direction but could not close the gap with Newsvendor.
 
-Pricing is only useful when elasticity exists; if service rate throttles throughput, price does nothing.
+## Overall Interpretation
 
-This matches your results: the pricing bandit provided little benefit.
+Viewed collectively, these results reflect a coherent story rather than a training failure. PPO learns the reward faithfully but the reward itself does not encode the bakery’s operational priorities in a profit-maximizing way. Pricing cannot overcome capacity constraints, and simple heuristics like Newsvendor outperform RL because they encode the correct structural prior: in a bakery facing non-stationary demand, a buffer of excess production is not wasteful—it is necessary.
+
+The lesson is not that deep RL “doesn’t work,” but that **reward design is the true optimization problem.** Future work should consider constrained RL, risk-sensitive objectives, or direct profit-driven formulations to realign agent incentives with business goals.
+

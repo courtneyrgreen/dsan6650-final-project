@@ -1,19 +1,34 @@
 ---
-title: "7 Conclusion and Future Work"
+title: "Conclusion and Future Work"
 format: html
 ---
 
-## Conclusion
+# Conclusion and Future Work
 
-- Newsvendor achieves the highest profit by over-producing and accepting waste.
-- PPO optimizes a composite welfare objective; it reduces waste but suffers high waits/abandonment → lower profit.
-- Price bandit changes the trade-off slightly; profit‑only alignment helps modestly but cannot overcome serving bottlenecks.
+The results highlight a central theme running through reinforcement learning for operations problems: an agent’s behavior reflects the reward it is given, not the metric by which humans ultimately judge success. In the Tiny Bakery environment, the Newsvendor heuristic achieves the highest profit precisely because it embraces a strategy that the RL reward discourages—producing aggressively, holding inventory buffers, and accepting waste as a necessary cost of maintaining service levels.
 
-## Future Work
+PPO, by contrast, optimizes a composite reward that places substantial weight on wait times, abandonment, and leftover inventory. Within that objective, the agent behaves exactly as expected: it adopts a conservative baking policy that minimizes exposure to negative reward terms but sacrifices throughput, service quality, and ultimately profit. The pricing bandit reinforces this pattern when trained on the same composite reward, and even the profit-only version can only shift behavior modestly because pricing cannot relieve the underlying capacity bottlenecks in ovens and queue dynamics. These findings echo trends reported in recent work on RL for perishable goods, service systems, and dynamic pricing, where agents often appear “suboptimal” on business metrics while being entirely optimal under the shaped reward.
 
-- Curriculum (stationary → non‑stationary), longer horizons.
-- Smarter par selection and limited restocks; contextual bandits.
-- Reward shaping aligned more tightly with profit and service SLAs.
-- Capacity-focused changes (serve batching policies, oven setups).
+Rather than identifying algorithmic failure, the experiments surface the deeper issue of **objective misalignment**—a challenge that is widely recognized in the RL-for-operations literature and remains an active research area.
 
+## Future directions
+
+Several extensions would help address this alignment gap and explore richer learning dynamics in the environment.
+
+**1. Reward redesign and constrained objectives.**  
+A profit-aligned reward or a constrained RL formulation—e.g., profit maximization subject to service-level penalties—could shift the agent toward more economically meaningful policies. Lagrangian relaxation, CVaR-based objectives, or multi-objective reward shaping may offer more principled ways to encode trade-offs between waste, service quality, and inventory risk.
+
+**2. Curriculum training and environmental structure.**  
+A staged curriculum beginning with stationary demand and gradually introducing non-stationarity may guide the policy out of the conservative local optimum. This mirrors approaches used successfully in perishable-goods RL and may reduce the tendency to collapse into underproduction.
+
+**3. Capacity-aware strategies.**  
+Introducing mechanisms such as short-horizon lookahead, bake-batch optimization, or alternative oven configurations may give the agent tools to escape starvation equilibria. Allowing limited same-day restocking or flexible par adjustments could further expand the feasible policy space.
+
+**4. Improved baselines and hybrid methods.**  
+More expressive par-selection heuristics, contextual bandits for dynamic pricing, or hybrid RL–heuristic controllers could bridge the gap between flexible learning and domain expertise. Because Newsvendor performs well by exploiting strong structural priors, combining such priors with RL may yield more robust strategies.
+
+**5. Alternative RL algorithms (QRDQN, SAC variants).**  
+Value-based or distributional methods may behave differently under the same reward structure, particularly when long-tail return distributions matter. Once QRDQN experiments complete, comparing its learned policies with PPO will help determine whether the conservative bias is algorithm-specific or fundamentally tied to the reward.
+
+Taken together, these findings suggest that the primary challenge in this domain is not improving PPO or adding more architectural sophistication, but determining how to encode the bakery’s operational objectives into a reward formulation the agent can meaningfully optimize. The experiments here provide a detailed diagnosis of the misalignment and lay the groundwork for the next generation of RL agents that better reflect real-world business priorities.
 

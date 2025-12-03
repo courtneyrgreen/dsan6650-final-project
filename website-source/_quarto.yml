@@ -3,9 +3,14 @@ project:
   output-dir: ../docs 
   resources: 
     - ../reports/figs/
+    - ../videos/
+    - ../screenshots/
+    - ../videos/
+    - ../images/
 
 website:
   title: "DSAN 6650 Final Project"
+  favicon: "../images/gu-logo.png"
   navbar:
     left:
       - href: introduction.qmd
@@ -13,24 +18,25 @@ website:
       - href: environment.qmd
         text: Environment
       - href: methods.qmd
-        text: Methods
-      - href: experiments.qmd
-        text: Experiments
+        text: Methods 
       - href: results.qmd
         text: Results
-      - href: analysis_discussion.qmd
+      - href: analysis.qmd
         text: Analysis
-      - href: conclusion_future_work.qmd
+      - href: conclusion.qmd
         text: Conclusion
       - href: references.qmd
         text: References
 
+    right:
+      - icon: github
+        href: "https://github.com/courtneyrgreen/dsan6650-final-project.github.io.git"
 format:
   html:
-    theme: cosmo
+    theme: lumen
+    css: styles.css
+    page-layout: full
     toc: true
     toc-depth: 3
-    page-layout: full
-    toc-location: right
 
 

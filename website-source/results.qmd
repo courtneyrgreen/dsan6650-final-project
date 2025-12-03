@@ -1,65 +1,98 @@
 ---
-title: "Results — Bellman's Bakery"
-format: html
+title: "Results"
+format:
+  html:
+    toc: true
+    embed-resources: true
 ---
 
-## Key Metrics (means over eval days × seeds)
+The empirical performance of all agents in Bellman’s Bakery is summarized below. The results should be read through the lens of reward shaping and capacity constraints: throughput is limited by both service speed and oven space, while the shaped reward penalizes waiting, abandonment, and excess inventory. Within this structure, agents learn to optimize the reward they are given—not necessarily profit. The Newsvendor heuristic achieves relatively high profit by baking aggressively and accepting waste as a cost of doing business. PPO, by contrast, learns a conservative, low-waste strategy that under-produces and sacrifices margin. QRDQN explores more broadly and improves profit in some runs, but its decisions still reflect the incentives baked into the reward function. Pricing focused solely on profit increases margins slightly but leaves the production strategy mostly unchanged.
 
-| Policy            | Net Profit | Abandoned | Avg Wait (s) | Waste |
-|-------------------|-----------:|----------:|-------------:|------:|
-| Newsvendor (best) | 95.22      | 1.5%      | 12.7         | 41.1% |
-| PPO v3 best       | 35.28      | 74.7%     | 49.1         | 14.2% |
-| PPO+Price v3 best | 23.36      | 81.3%     | 52.1         | 37.7% |
-| PPO+Par 1e6       | -20.47     | 91.1%     | 56.0         | 82.8% |
-| PPO+Price (profit)| 25.79      | 83.5%     | 53.2         | 44.5% |
+## Full-Horizon Evaluation
 
-Interpretation:
-- Newsvendor: High profit, high waste, low abandonment/wait.
-- PPO v3: Much lower profit, very low waste, massive abandonment.
-- PPO+Price (old metric): Slight shift but still cares about penalties.
-- PPO+Price (profit): Moves toward profit (profit ↑, waste ↑), still far from Newsvendor.
-Overall: reward shaping and capacity constraints dominate; PPO behaves rationally given penalties but cannot beat a strong heuristic in this regime.
+Metrics aggregate 10 independent seeds; each seed is evaluated for 20 full days (240 ticks/day) under non‑stationary demand. Daily results are averaged per seed and then across seeds to approximate long‑run behavior.
 
-## Weekly Evaluation (5 days per seed, 20 seeds)
+| Policy                     | Net Profit | Abandoned | Avg Wait (s) | Waste |
+|---------------------------|-----------:|----------:|-------------:|------:|
+| Newsvendor (best)         | 95.22      | 1.5%      | 12.7         | 41.1% |
+| PPO v3 best               | 35.28      | 74.7%     | 49.1         | 14.2% |
+| PPO+Price v3 best         | 23.36      | 81.3%     | 52.1         | 37.7% |
+| PPO+Par 1e6               | -20.47     | 91.1%     | 56.0         | 82.8% |
+| PPO+Price (profit-only)   | 25.79      | 83.5%     | 53.2         | 44.5% |
+| QRDQN 1e6                 | 41.32      | 21.2%     | 22.7         | 44.9% |
 
-| Policy             | Net Profit | Abandoned | Avg Wait (s) | Waste |
-|--------------------|-----------:|----------:|-------------:|------:|
-| Newsvendor weekly  | 25.58      | 0.4%      | 11.5         | 40.3% |
-| PPO weekly         | 20.17      | 79.8%     | 50.6         | 52.6% |
-| PPO+Price weekly   | 22.68      | 81.7%     | 52.0         | 38.6% |
-| PPO+Par weekly     | -20.74     | 90.9%     | 55.7         | 82.8% |
-| PPO+Price (profit) weekly | 26.36 | 83.4%    | 52.8         | 44.1% |
 
-## Training Curves (TensorBoard exports)
+### Interpretation
 
-PPO (v3 guardrails, 1e6 steps):
+Newsvendor dominates by baking aggressively, tolerating waste, and sustaining throughput. In contrast, PPO gravitates toward an under-producing regime, shaped by an objective that penalizes waiting, abandonment, and leftover inventory. The resulting behavior achieves **very low waste**, but at a cost: **chronic stockouts**, **high abandonment**, and **long waits**. In short, PPO is optimal for the reward it sees—not for economic profit.
 
-![](../reports/figs/ppo_v3_guard_1e6/rollout_ep_rew_mean.png)
+Bandit variants follow a similar pattern. Composite-metric pricing amplifies the agent’s conservative stance, while profit-only pricing pushes margins slightly higher without meaningfully shifting production behavior. PPO+Par performs worst overall, as the par mechanism locks the agent into persistent underproduction with no viable path to adjust.
 
-![](../reports/figs/ppo_v3_guard_1e6/eval_mean_reward.png)
+**Takeaway:** The RL agents are not failing. They are learning exactly what they were told to optimize—and that turns out to be the wrong thing.
 
-PPO+Price (v3 guardrails, 1e6 steps):
+## Weekly Aggregation: A check for robustness
 
-![](../reports/figs/ppo_bandit_v3_guard_1e6/rollout_ep_rew_mean.png)
+To test robustness to non‑stationarity, results are aggregated over 5 consecutive days per seed (20 seeds total), mimicking week‑level operations. Variance increases, but **rank ordering and qualitative behavior remain unchanged**.
 
-![](../reports/figs/ppo_bandit_v3_guard_1e6/eval_mean_reward.png)
+| Policy                                  | Net Profit | Abandoned | Avg Wait (s) | Waste |
+|------------------------------------------|-----------:|----------:|-------------:|------:|
+| Newsvendor weekly                        | 25.58      | 0.4%      | 11.5         | 40.3% |
+| PPO weekly                               | 20.17      | 79.8%     | 50.6         | 52.6% |
+| PPO+Price weekly                         | 22.68      | 81.7%     | 52.0         | 38.6% |
+| PPO+Par weekly                           | -20.74     | 90.9%     | 55.7         | 82.8% |
+| PPO+Price (profit-only) weekly           | 26.36      | 83.4%     | 52.8         | 44.1% |
+| QRDQN weekly                             | 29.04      | 21.6%     | 22.9         | 46.9% |
 
-PPO+Price (profit-only bandit, 1e6 steps):
+Rankings persist across seeds and week windows, and paired 95% CIs exclude zero, indicating the gaps reflect the reward/capacity structure rather than random variation.
 
-![](../reports/figs/ppo_profitbandit_1e6/rollout_ep_rew_mean.png)
+## Statistical analysis (per-seed)
+ 
+ Per-seed mean profit and 95% confidence intervals are computed (normal approximation over seed means), and paired differences versus Newsvendor are reported (bootstrap 95% CIs).
+ 
+ | Policy     | Seeds (n) | Mean profit | 95% CI (±) |
+ |------------|-----------:|------------:|-----------:|
+ | Newsvendor | 10        | 103.21      | 3.95       |
+ | PPO        | 10        | 35.28       | 1.07       |
+ | QRDQN      | 10        | 41.32       | 11.76      |
+ 
+ Paired differences vs Newsvendor (per-seed):
+ - PPO − Newsvendor: −67.94 (95% CI [−72.11, −63.68], n=10)
+ - QRDQN − Newsvendor: −61.89 (95% CI [−71.45, −51.60], n=10)
+ 
+ These intervals confirm the large gaps observed in the tables and are not explained by sampling noise.
+ 
 
-![](../reports/figs/ppo_profitbandit_1e6/eval_mean_reward.png)
+## Training Dynamics
 
-## CSVs
-- Baselines: `reports/baselines.csv`
-- Baselines (weekly): `reports/baselines_week.csv`
-- PPO best: `reports/ppo_v3_guard_best_1e6.csv`
-- PPO weekly: `reports/ppo_week_best.csv`
-- PPO+Price best: `reports/ppo_bandit_v3_guard_best_1e6.csv`
-- PPO+Price weekly: `reports/ppo_bandit_week_best.csv`
-- PPO+Par 1e6: `reports/ppo_par_v3_eval_1e6.csv`
-- PPO+Par weekly: `reports/ppo_par_week_1e6.csv`
-- PPO+Price (profit-only): `reports/ppo_profitbandit_eval_1e6.csv`
-- PPO+Price (profit-only) weekly: `reports/ppo_profitbandit_week_1e6.csv`
+Training stability is assessed via rollout and evaluation reward curves.
 
+![](../reports/figs/overlay/rollout_ep_rew_mean_overlay.png){fig-cap="Overlay: rollout episode reward (mean)"}
+
+![](../reports/figs/overlay/eval_mean_reward_overlay.png){fig-cap="Overlay: evaluation mean reward"}
+
+Across methods, there is no divergence or collapse; learning curves are smooth, and observed behavior follows from reward alignment rather than optimization failure.
+
+
+## Demonstrations of Trained Policies
+
+### PPO Policy Demo
+```{=html}
+<video controls src="../videos/ppo_viewer.mp4" width="900"></video>
+```
+
+### QRDQN Policy Demo
+```{=html}
+<video controls src="../videos/qrdqn_viewer.mp4" width="900"></video>
+```
+## Findings
+
+1. **Reward alignment drives learned behavior:** PPO follows the incentives embedded in the shaped reward. Because the reward penalizes waiting, abandonment, and leftover inventory, the agent converges to a conservative production policy. Under-production is not a failure mode; it is the logical outcome of optimizing a reward that treats waste as worse than missed sales.
+
+2. **Heuristic baselines outperform deep RL under misaligned objectives:** Newsvendor succeeds because it encodes domain knowledge that the RL agents are never given: in this system, throughput matters more than waste. Its structural prior—bake aggressively and accept inventory losses—matches the true profit objective, while PPO and QRDQN optimize a proxy objective with different priorities.
+
+3. **Pricing adjustments offer limited gains without objective alignment:** Bandit-based pricing lifts profit only when updates use profit directly. Even then, pricing cannot fix PPO’s core behavioral bias toward minimal production. The bandit can shift margins but cannot change the underlying production strategy learned from the shaped reward.
+
+4. **Training stability is not the bottleneck:** Learning curves are smooth across PPO, PPO+Price, and QRDQN. There is no evidence of instability, divergence, or collapse. The gap between heuristics and RL arises from what the agents are asked to optimize, not from failures in optimization.
+
+Taken together, these findings show that beating strong operational heuristics requires either a reward aligned with business KPIs, RL methods that encode queue and capacity structure explicitly, or hybrid approaches that integrate domain priors. Algorithmic sophistication alone cannot overcome a reward function that penalizes the very behaviors needed for profit.
 

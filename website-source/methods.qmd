@@ -1,25 +1,180 @@
 ---
-title: "4 Methods"
-format: html
+title: "Methods"
+format:
+  html:
+    toc: true
+    embed-resources: true
 ---
 
-## 4.1 PPO Agent
+This section describes the learning algorithms, pricing bandit, heuristic baselines, and experimental protocols used to evaluate control policies in Bellman’s Bakery. Two reinforcement learning (RL) agents—Proximal Policy Optimization (PPO) and Quantile Regression DQN (QRDQN), are compared against bandit-augmented PPO and established heuristics. All approaches interact with the same simulator described in [Environment](environment.html).
 
-- Algorithm: MaskablePPO (SB3-Contrib), action masking from the environment.
-- Key hyperparameters: n_steps=2048, batch_size=256, gamma=0.995, gae_lambda=0.95, ent_coef=0.01.
-- Guardrails: serve_per_tick=3, bake‑mask prioritizes serving when possible.
+## Environment summary (abridged)
 
-## 4.2 Pricing Bandit
+Each episode spans 240 ticks (10 seconds each) and includes two ovens (capacity 4 units each), a queue capped at 12 customers, and a limit of three customers served per tick. Arrivals follow a nonhomogeneous Poisson process with morning and midday peaks. Demand is nonstationary, exhibiting ±10% daily drift and ±10% weekly fluctuations.
 
-- Thompson Sampling over global daily price multiplier arms.
-- Variants:
-  - Penalty-based metric (composite): profit − 0.02×wait_ticks − 5×abandoned − 2×balked.
-  - Profit‑only metric: uses net profit directly; widened arms (e.g., 0.7–1.3).
+The reward is a shaped, multi-objective signal:  
+- revenue and a +0.1 serve bonus,  
+- a wait penalty of 0.01 per tick per queued customer,  
+- a 0.5 abandonment penalty,  
+- a 0.1 balk penalty, and  
+- a terminal leftover-cost penalty.  
 
-## 4.3 Baseline Policies
+Daily price multipliers scale revenue. Demand elasticity is minimal, so pricing primarily adjusts revenue rather than arrival intensity.
 
-- Bake-to-Par: maintain simple par levels by baking largest deficits; always serve earliest matching customer.
-- Greedy-Queue: bake the most requested item in queue; fallback to demand mix.
-- Newsvendor: set daily targets from expected demand; bake toward largest target gaps; this is the strongest baseline here.
+## Learning agents
 
+### Proximal Policy Optimization (PPO)
+
+PPO is implemented with **MaskablePPO** (SB3-Contrib) to ensure feasibility in the 11-action discrete space. Invalid actions are masked by assigning logits of $-\infty$. In addition, when any serve action is available, all bake actions are masked to enforce service priority.
+
+#### Architecture and training setup
+- Policy network: two-layer MLP (256–256), Tanh activations.  
+- Value network: shares backbone features with the policy.  
+- Vectorized training: 8 parallel environments.
+
+#### Hyperparameters
+- `n_steps = 2048`  
+- `batch_size = 256`  
+- `gamma = 0.995`  
+- `gae_lambda = 0.95`  
+- `clip_range = 0.2`  
+- `ent_coef = 0.01`  
+- `learning_rate = 3e-4`  
+- Training horizon: $10^6$ environment steps (preceded by a 300k warm-up run).
+
+#### Environment-specific guardrails
+- Bake actions masked when any serve action is feasible.  
+- Oven-capacity masking for bake actions.  
+- Per-tick cap: `serve_per_tick = 3`.  
+
+PPO maximizes the shaped reward; it is not directly trained to maximize economic profit.
+
+
+### Quantile Regression DQN (QRDQN)
+
+QRDQN estimates full return distributions by learning quantile values. In SB3, QRDQN does not natively support action masking; when an invalid action is selected, the environment applies a small penalty and treats the step as idle. Exploration follows ε-greedy decay.
+
+#### Architecture and training setup
+- MLP architecture: 256–256, Tanh activation.  
+- Number of quantiles: 51.  
+- Replay buffer: size $10^6$, uniform sampling.  
+- Exploration: ε-greedy (1.0 → 0.05 linear decay).  
+- Target network: Polyak averaging with $\tau = 0.005$.  
+- Optimizer: Adam, learning rate $3\times 10^{-4}$.
+
+#### Hyperparameters
+- `batch_size = 256`  
+- `gamma = 0.995`  
+- `learning_starts = 50_000`  
+- `train_freq = 4`, `gradient_steps = 1`  
+- `target_update_interval = 1`  
+- Training horizon: $10^6$ steps (matched to PPO).
+
+## Bandit layer: daily pricing
+
+A Thompson-sampling bandit selects a **single daily price multiplier**, yielding a two-time-scale design: the bandit chooses the global price, and the RL controller operates within the day.
+
+### Price arms
+- Standard grid: {0.9, 1.0, 1.1}  
+- Profit-oriented grid: {0.7, 0.85, 1.0, 1.15, 1.3}
+
+### Update metrics
+Two evaluation signals are considered:
+
+1. **Composite metric** (aligned with RL reward shaping):  
+  $$
+\text{metric} 
+  = \text{profit}
+   - 0.02 \cdot \text{wait\_ticks}
+   - 5 \cdot \text{abandoned}
+   - 2 \cdot \text{balked}.   
+  $$
+
+
+2. **Net-profit-only** metric:  
+$$
+\text{metric} = \text{net profit}.
+$$
+
+The profit-only metric tests whether the bandit can push PPO toward more revenue-oriented behavior.
+
+## Heuristic baselines
+
+### Bake-to-Par
+Maintains fixed per-item inventory targets. The agent bakes the largest deficit first and serves the earliest matching customer.
+
+### Greedy Queue
+Counts pending requests in the queue and bakes the most requested item; defaults to long-run demand proportions when no item is dominant.
+
+### Newsvendor (strongest baseline)
+Computes per-item production targets from expected total demand and bakes toward the largest remaining target gap. This heuristic performs strongly in settings where demand is predictable and waste costs are absorbed by high throughput.
+
+## Training protocol
+
+All learning agents use identical simulator configurations. Training employs 8 vectorized environments and Adam optimization. Models are checkpointed periodically. Reported results include:
+
+- the **final checkpoint**, and  
+- the **best checkpoint**, selected using evaluation net profit averaged over seeds.
+
+Random seed handling follows SB3 conventions for PPO and QRDQN to ensure reproducibility.
+
+
+## Evaluation protocol
+
+Two evaluation regimes are used:
+
+- **Full horizon:** 10 seeds × 20 days; results reported as seed-level means.  
+- **Weekly stability:** 20 seeds × 5 days; emphasizes variance across seeds.
+
+Key performance indicators (KPIs):
+
+- net profit,  
+- abandonment rate,  
+- mean wait (seconds),  
+- waste rate,  
+- service rate.
+
+RL-internal performance is monitored through TensorBoard rollout and evaluation reward curves.
+
+
+## Reward specification (reference)
+
+| Component | Meaning | Weight | Sign |
+|-----------|---------|-------:|-----:|
+| Profit | revenue − cost | +1.0 | positive |
+| Wait penalty | per tick of waiting | −0.01 | negative |
+| Abandon penalty | expired patience | −0.7 | negative |
+| Balk penalty | queue full | −0.1 | negative |
+| Leftover cost | unsold items | −1.0 | negative |
+| Serve bonus | each service | +0.1 | positive |
+
+Formal definition:
+$$
+R_t
+= \mathrm{profit}_t
+- \lambda_w\,\mathrm{wait\_ticks}_t
+- \lambda_a\,\mathrm{abandon}_t
+- \lambda_b\,\mathrm{balk}_t
+- \lambda_L\,\mathrm{leftover}_t
++ \lambda_s\,\mathrm{served}_t,
+$$
+
+with  
+$\lambda_w = 0.01$,  
+$\lambda_a = 0.7$,  want e
+$\lambda_b = 0.1$,  
+$\lambda_L = 1.0$,  
+$\lambda_s = 0.1$.
+
+### Expected behavioral differences
+- **PPO** tends to adopt conservative, waste-minimizing strategies because penalties accumulate over time.  
+- **QRDQN**, with replay and distributional targets, may explore more aggressive bake/serve trade-offs even under the same reward.
+
+
+## Implementation details and reproducibility
+
+- Frameworks: Stable-Baselines3 2.3.0 and SB3-Contrib 2.3.0.  
+- Core stack pinned: NumPy 1.26.4, Pandas 2.1.4, PyArrow 14.0.2.  
+- Training and evaluation scripts, seed configurations, and plotting utilities are included in project repositories.  
+- TensorBoard logs are exported for inclusion in the Results section.
 

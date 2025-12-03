@@ -12,7 +12,7 @@ The environment exposes operational trade-offs among production timing, waste, c
 
 ## Viewer Snapshot
 
-![](../images/bellman_bakery_viewer2.png){fig-cap="Bellman's Bakery Viewer"}
+![](../screenshots/bellman_bakery_viewer2.png){fig-cap="Bellman's Bakery Viewer"}
 
 ## State, Actions, and Dynamics
 
@@ -88,7 +88,7 @@ $$
 r_t = (\text{price}_i - \text{cost}_i)\mathbf{1}\{\text{serve } i\}
 + 0.1 \mathbf{1}\{\text{serve } i\}
 - 0.01 \cdot \text{queue\_length}_t
-- 0.5 \mathbf{1}\{\text{abandon}\}
+- 0.7 \mathbf{1}\{\text{abandon}\}
 - 0.1 \mathbf{1}\{\text{balk}\}.
 $$
 

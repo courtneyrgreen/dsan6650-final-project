@@ -2,21 +2,25 @@
 title: "Reward Misalignment in Deep Reinforcement Learning: Evidence from a Bakery Production Environment"
 author: "Courtney Green"
 date: "2025-12-02"
-format: html
+format:
+  html:
+    toc: true
+    embed-resources: true
 ---
 
 
-Abstract 
+## Abstract 
+
 
 Table of Contents:
-1. Introduction: [Introduction](introduction.qmd)
-2. Environment & Problem Formulation: [Environment](environment.qmd)
-3. Methods: [Methods](methods.qmd)
-4. Experiments: [Experiments](experiments.qmd)
-5. Results: [Results](results.qmd)
-6. Analysis & Discussion: [Analysis & Discussion](analysis_discussion.qmd)
-7. Conclusion & Future Work: [Conclusion & Future Work](conclusion_future_work.qmd)
-7. References: [References](references.qmd)
+
+1. [Introduction](introduction.html)
+2. [Environment](environment.html)
+3. [Methods](methods.html)
+4. [Results](results.html)
+5. [Analysis & Discussion](analysis_discussion.html)
+6. [Conclusion & Future Work](conclusion_future_work.html)
+7. [References](references.html)
 
 
 
